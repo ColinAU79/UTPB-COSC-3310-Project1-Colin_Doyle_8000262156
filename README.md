@@ -12,3 +12,5 @@ The grading criteria is:
 * If your code encounters an unhandled exception and crashes, the grade is zero.
 * For every unit test passed (assuming no crashes), you gain around 2 points.  The mul() methods will be weighted slightly more heavily.
 * If your code passes every test, that's 100.
+# Sourse for the ADDER in logic
+https://www.electronics-tutorials.ws/combination/comb_7.html 
