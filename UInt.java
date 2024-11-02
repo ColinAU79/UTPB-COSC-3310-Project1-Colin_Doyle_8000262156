@@ -39,6 +39,9 @@ public class UInt {
     public UInt(int i) {
         // Determine the number of bits needed to store i in binary format.
         length = (int)(Math.ceil(Math.log(i)/Math.log(2.0)) + 1);
+        if(length == (Math.log(i)/Math.log(2.0)) + 1){
+            length = length + 1;
+        }
         bits = new boolean[length];
 
         // Convert the integer to binary and store each bit in the array.
@@ -133,17 +136,8 @@ public class UInt {
         // So first we use Math.min to determine which is shorter.
         // Then we need to align the two arrays at the 1s place, which we accomplish by indexing them at length-i-1.
         for (int i = 0; i < Math.min(this.length, u.length); i++) {
-            this.bits[this.length - i - 1] =
-                    this.bits[this.length - i - 1] &
-                            u.bits[u.length - i - 1];
+            this.bits[this.length - i - 1] = this.bits[this.length - i - 1] & u.bits[u.length - i - 1];
         }
-        // In the specific case that this.length is greater, there are additional elements of
-        //   this.bits that are not getting ANDed against anything.
-        // Depending on the implementation, we may want to treat the operation as implicitly padding
-        //   the u.bits array to match the length of this.bits, in which case what we actually
-        //   perform is simply setting the remaining indices of this.bits to false.
-        // Note that while this logic is helpful for the AND operation if we want to use this
-        //   implementation (implicit padding), it is never necessary for the OR and XOR operations.
         if (this.length > u.length) {
             for (int i = u.length; i < this.length; i++) {
                 this.bits[this.length - i - 1] = false;
@@ -165,68 +159,277 @@ public class UInt {
     }
 
     public void or(UInt u) {
-        // TODO Complete the bitwise logical OR method
+        for (int i = 0; i < Math.min(this.length, u.length); i++) {
+            this.bits[this.length - i - 1] = this.bits[this.length - i - 1] || u.bits[u.length - i - 1];
+        }
         return;
     }
 
     public static UInt or(UInt a, UInt b) {
-        // TODO Complete the static OR method
-        return null;
+        UInt temp = a.clone();
+        temp.or(b);
+        return temp;
     }
 
     public void xor(UInt u) {
-        // TODO Complete the bitwise logical XOR method
+        for (int i = 0; i < Math.min(this.length, u.length); i++) {
+            this.bits[this.length - i - 1] = 
+            !(this.bits[this.length - i - 1] & u.bits[u.length - i - 1]) &
+            (this.bits[this.length - i - 1] || u.bits[u.length - i - 1]);
+        }
         return;
     }
 
     public static UInt xor(UInt a, UInt b) {
-        // TODO Complete the static XOR method
-        return null;
+        UInt temp = a.clone();
+        temp.xor(b);
+        return temp;
     }
 
-    public void add(UInt u) {
+    public void add(UInt tempU) {
         // TODO Using a ripple-carry adder, perform addition using a passed UINT object
         // The result will be stored in this.bits
         // You will likely need to create a couple of helper methods for this.
         // Note this one, like the bitwise ops, also needs to be aligned on the 1s place.
         // Also note this may require increasing the length of this.bits to contain the result.
+        UInt u = tempU.clone();
+        Boolean c_in = false;
+        Boolean d = false;
+        Boolean e = false;
+        Boolean f = false;
+        int added = Math.abs(this.length - u.length);
+        if(u.length > this.length){
+            boolean[] newArr = Arrays.copyOf(this.bits, this.length + added);
+            for (int i = newArr.length - 1; i >= added; i--) {
+                newArr[i] = this.bits[i - added];
+            }
+            for (int i = added - 1; i >= 0; i--) {
+                newArr[i] = false;
+            }
+            this.bits = newArr;
+            this.length = newArr.length;
+        }
+        if(u.length < this.length){
+            boolean[] newArr = Arrays.copyOf(u.bits, u.length + added);
+            for (int i = newArr.length - 1; i >= added; i--) {
+                newArr[i] = u.bits[i - added];
+            }
+            for (int i = added - 1; i >= 0; i--) {
+                newArr[i] = false;
+            }
+            u.bits = newArr;
+            u.length = newArr.length;
+        }
+
+        for (int i = 0; i < Math.min(this.length, u.length); i++) {
+            d = 
+            !(this.bits[this.length - i - 1] & u.bits[u.length - i - 1]) &
+            (this.bits[this.length - i - 1] || u.bits[u.length - i - 1]);
+
+            e = this.bits[this.length - i - 1] & u.bits[u.length - i - 1];
+
+            f = c_in & d;
+            
+            this.bits[this.length - i - 1] = !(d & c_in) & (d || c_in);
+
+            c_in = f || e;
+            
+        }
+        
         return;
     }
 
     public static UInt add(UInt a, UInt b) {
         // TODO A static change-safe version of add, should return a temp UInt object like the bitwise ops.
-        return null;
+        UInt temp = a.clone();
+        temp.add(b);
+        return temp;
+        
     }
 
     public void negate() {
         // TODO You'll need a way to perform 2's complement negation
         // The add() method will be helpful with this.
+        
+        // UInt tempInt = new UInt(this.toInt());
+        // this.bits = tempInt.bits;
+        // this.length = tempInt.length;
+        for (int i = 0; i < this.length; i++) {
+            this.bits[this.length - i - 1] = !this.bits[this.length - i - 1];
+        }
+        UInt temp = new UInt(1);
+        this.add(temp);
+        
+        
+        return;
     }
 
-    public void sub(UInt u) {
+    public void sub(UInt tempInt) {
         // TODO Using negate() and add(), perform in-place subtraction
         // As this class is supposed to handle only unsigned values,
         //   if the result of the subtraction operation would be a negative number then it should be coerced to 0.
+        
+        UInt u = tempInt.clone();
+        u.negate();
+
+        Boolean c_in = false;
+        Boolean d = false;
+        Boolean e = false;
+        Boolean f = false;
+        int added = Math.abs(this.length - u.length);
+        
+        if(u.length < this.length){
+            boolean[] newArr = Arrays.copyOf(u.bits, u.length + added);
+            for (int i = newArr.length - 1; i >= added; i--) {
+                newArr[i] = u.bits[i - added];
+            }
+            for (int i = added - 1; i >= 0; i--) {
+                newArr[i] = true;
+            }
+            u.bits = newArr;
+            u.length = newArr.length;
+            added = 0;
+        }
+        
+        for (int i = 0; i < Math.min(this.length, u.length); i++) {
+            d = 
+            !(this.bits[this.length - i - 1] & u.bits[u.length - i - 1]) &
+            (this.bits[this.length - i - 1] || u.bits[u.length - i - 1]);
+
+            e = this.bits[this.length - i - 1] & u.bits[u.length - i - 1];
+
+            f = c_in & d;
+            
+            this.bits[this.length - i - 1] = !(d & c_in) & (d || c_in);
+
+            c_in = f || e;
+            
+        }
+
+        
         return;
     }
 
     public static UInt sub(UInt a, UInt b) {
         // TODO And a static change-safe version of sub
-        return null;
+        UInt temp = a.clone();
+        temp.sub(b);
+        return temp;
     }
 
     public void mul(UInt u) {
+        
         // TODO Using Booth's algorithm, perform multiplication
         // This one will require that you increase the length of bits, up to a maximum of X+Y.
         // Having negate() and add() will obviously be useful here.
         // Also note the Booth's always treats binary values as if they are signed,
         //   while this class is only intended to use unsigned values.
         // This means that you may need to pad your bits array with a leading 0 if it's not already long enough.
+        UInt m = u.clone();
+
+        int added = Math.abs(this.length - m.length);
+        if(m.length > this.length){
+            boolean[] newArr = Arrays.copyOf(this.bits, this.length + added);
+            for (int i = newArr.length - 1; i >= added; i--) {
+                newArr[i] = this.bits[i - added];
+            }
+            for (int i = added - 1; i >= 0; i--) {
+                newArr[i] = false;
+            }
+            this.bits = newArr;
+            this.length = newArr.length;
+        }
+        if(m.length < this.length){
+            boolean[] newArr = Arrays.copyOf(m.bits,m.length + added);
+            for (int i = newArr.length - 1; i >= added; i--) {
+                newArr[i] = m.bits[i - added];
+            }
+            for (int i = added - 1; i >= 0; i--) {
+                newArr[i] = false;
+            }
+            m.bits = newArr;
+            m.length = newArr.length;
+        }
+
+        //System.out.println(m + ": the m " + m.toInt());
+        UInt o = m.clone();
+        o.negate();
+        UInt min_m = o;
+        
+        //System.out.println(min_m + ": the min_m " + min_m.toInt());
+        // "this" is the r
+        //System.out.println(this + ": the r " + this.toInt());
+
+        m.bits = make_bigged_mul(m, m.bits.length + 1);
+        m.length = m.bits.length;
+        //System.out.println(m + ": the m post add " + m.toInt());
+
+        min_m.bits = make_bigged_mul(min_m, min_m.bits.length + 1);
+        min_m.length = min_m.bits.length;
+        //System.out.println(min_m + ": the min_m post add " + min_m.toInt());
+       
+        this.bits = make_same_len(this, this.length);
+        this.length = this.bits.length;
+        this.bits = make_bigged_mul(this, 1);
+        this.length = this.bits.length;
+        //System.out.println(this + ": the r post add " + this.toInt());
+        for(int i = 0; i < ((this.length + 1) / 2); i++){
+            if((((this.length + 1) / 2) - 1) == i){
+                this.bits = shift_1(this);
+                continue;
+            }
+            if(this.bits[this.length - 1] == this.bits[this.length - 2]){// if 00 / 11
+                this.bits = shift_1(this);
+                continue; // shift bits algo abv this
+            }
+            if(this.bits[this.length - 1] & !this.bits[this.length - 2]){// add A/ m
+                this.add(m);
+                this.bits = shift_1(this);
+                continue;
+            }
+            if(!this.bits[this.length - 1] & this.bits[this.length - 2]){// add S/ min_m
+                this.add(min_m);
+                this.bits = shift_1(this);
+                continue;
+            }
+            
+        }
         return;
     }
+    public static boolean[] shift_1(UInt a){
 
+        boolean[] newArr = Arrays.copyOf(a.bits, a.length);
+        for (int i = newArr.length - 1; i >= 1; i--) {
+            newArr[i] = a.bits[i - 1];
+        }
+        if(a.bits[0] == true){
+            newArr[0] = true;
+        }else{
+            newArr[0] = false;
+        }
+
+        return newArr;
+    }
     public static UInt mul(UInt a, UInt b) {
         // TODO A static, change-safe version of mul
-        return null;
+        UInt temp = a.clone();
+        temp.mul(b);
+        return temp;
     }
+    public static boolean[] make_same_len(UInt a, int added){
+        
+        boolean[] newArr = Arrays.copyOf(a.bits, a.length + added);
+        for (int i = newArr.length - 1; i >= added; i--) {
+            newArr[i] = a.bits[i - added];
+        }
+        for (int i = added - 1; i >= 0; i--) {
+            newArr[i] = false;
+        }
+        return newArr;
+    }
+    public static boolean[] make_bigged_mul(UInt a, int added){
+        boolean[] newArr = Arrays.copyOf(a.bits, a.length + added);
+        return newArr;
+    }
+
 }
